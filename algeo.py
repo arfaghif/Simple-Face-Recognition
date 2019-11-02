@@ -66,10 +66,10 @@ class Matcher(object):
             self.names.append(k)
             self.matrix.append(v)
         self.matrix = np.array(self.matrix)
-        print(self.matrix)
+        #print(self.matrix)
         self.names = np.array(self.names)
 
-    def cos_cdist(self, vector, method):
+    def cos_cdist(self, vector, Euclidean):
         # getting cosine distance between search image and images database
         #print(vector)
         #v = vector.reshape(1, -1)
@@ -78,19 +78,30 @@ class Matcher(object):
         #m = scipy.spatial.distance.cdist(self.matrix, v, 'cosine').reshape(-1)
         #print(m)
         a =[]
-        for i in range (len(self.matrix)):
-            res = dotproduct(v,self.matrix[i].tolist())/(lngth(v)*lngth(self.matrix[i].tolist()))
-            res = 1 - res
-            print(res)
-            a.append(res)
-        a = np.array(a)
-        return a
-    def match(self, image_path, topn=5):
+        if (Euclidean):
+            for i in range (len(self.matrix)):
+                res = dstnc(v, self.matrix[i].tolist())
+                a.append(res)
+            a = np.array(a)
+            return a
+        else:
+            for i in range (len(self.matrix)):
+                res = dotproduct(v,self.matrix[i].tolist())/(lngth(v)*lngth(self.matrix[i].tolist()))
+                a.append(res)
+            a = np.array(a)
+            return a
+
+
+    def match(self, image_path, topn, Euclidean):
         features = extract_features(image_path)
-        img_distances = self.cos_cdist(features)
+        img_distances = self.cos_cdist(features, Euclidean)
         #print(img_distances)
         # getting top 5 records
-        nearest_ids = np.argsort(img_distances)[:topn].tolist()
+        if (Euclidean):
+            nearest_ids = np.argsort(img_distances)[:topn].tolist()
+        else:
+            nearest_ids = np.argsort(img_distances)[::-1][:topn].tolist()
+        
         nearest_img_paths = self.names[nearest_ids].tolist()
 
         return nearest_img_paths, img_distances[nearest_ids].tolist()
@@ -100,27 +111,6 @@ def show_img(path):
     img = imageio.imread(path, pilmode="RGB")
     plt.imshow(img)
     plt.show()
-    
-def run():
-    images_path = 'nyoba/'
-    files = [os.path.join(images_path, p) for p in sorted(os.listdir(images_path))]
-    # getting 3 random images 
-    sample = random.sample(files, 1)
-    
-    batch_extractor(images_path)
-
-    ma = Matcher('features.pck')
-    
-    for s in sample:
-        print ('Query image ==========================================')
-        show_img(s)
-        names, match = ma.match(s, topn=2)
-        print ('Result images ========================================')
-        for i in range(2):
-            # we got cosine distance, less cosine distance between vectors
-            # more they similar, thus we subtruct it from 1 to get match value
-            print ('Match %s' % (1-match[i]))
-            show_img(os.path.join(images_path, names[i]))
 
 
 def dstnc(v1, v2):
@@ -140,4 +130,37 @@ def dotproduct(v1, v2):
     for i in range (len(v1)):
         sum+= v1[i] * v2[i]
     return sum
+
+def run():
+    images_path = 'pins-face-recognition\PINS\pins_Aaron Paul/'
+    files = [os.path.join(images_path, p) for p in sorted(os.listdir(images_path))]
+    # getting 3 random images
+    images_path1 = 'nyoba/' 
+    #files1 = [os.path.join(images_path, p) for p in sorted(os.listdir(images_path))]
+    #sample = random.sample(files,1)[0]
+    a = input('Masukkan nama image: ')
+    sample = 'nyoba\\' + a +'/'
+    #print(sample)
+
+    print('1. Euclidean\n2.Cosinus')
+    Method = int(input('Pilih metode: '))
+    batch_extractor(images_path)
+    ma = Matcher('features.pck')
+    Euclidean = 1==Method
+    #for s in sample:
+    print ('Query image ==========================================')
+    show_img(sample)
+    names, match = ma.match(sample, 3, Euclidean)
+    print ('Result images ========================================')
+    for i in range(3):
+        # we got cosine distance, less cosine distance between vectors
+        # more they similar, thus we subtruct it from 1 to get match value
+        if (not Euclidean):
+            print ('Match %s' % (match[i]))
+
+        show_img(os.path.join(images_path, names[i]))
+
+
+
+
 run()
